@@ -3,7 +3,7 @@ package routing
 import (
 	"net/http"
 
-	serverdi "github.com/a-digi/coco-server/di"
+	serverdi "github.com/a-digi/coco-server/server/di"
 )
 
 type RouteHandler struct {
