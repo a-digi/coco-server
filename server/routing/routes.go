@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 	"github.com/a-digi/coco-logger/logger"
-	serverdi "github.com/a-digi/coco-server/di"
+	serverdi "github.com/a-digi/coco-server/server/di"
 )
 
 type HandlerInterface interface {

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/a-digi/coco-logger/logger"
-	"github.com/a-digi/coco-server/routing"
+	"github.com/a-digi/coco-server/server/routing"
 )
 
 type DomainFile struct {
