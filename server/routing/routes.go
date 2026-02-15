@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"github.com/a-digi/coco-logger/logger"
 	serverdi "github.com/a-digi/coco-server/server/di"
+	"github.com/a-digi/coco-server/server/security"
 )
 
 type HandlerInterface interface {
@@ -73,6 +74,7 @@ type RouteBuilder struct {
 	routes     []Routes
 	HandlerMap map[string]HandlerInterface
 	Context    serverdi.Context
+	SecurityLayer security.SecurityLayer
 }
 
 func (rb *RouteBuilder) AddContext(ctx serverdi.Context) {
@@ -88,6 +90,12 @@ func (rb *RouteBuilder) Build(log logger.Logger) http.Handler {
 }
 
 func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if rb.SecurityLayer != nil {
+		if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
+			// Authorization failed, response already handled or block
+			return
+		}
+	}
 	for _, route := range rb.routes {
 
 		if len(route.YamlContent) == 0 || route.HandlerMap == nil {
@@ -123,6 +131,10 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
     rb.Context.GetLogger().Warning("Request not found: %s %s", r.Method, r.URL.Path)
 	http.NotFound(w, r)
+}
+
+func (rb *RouteBuilder) SetSecurityLayer(layer security.SecurityLayer) {
+	rb.SecurityLayer = layer
 }
 
 type Routes struct {

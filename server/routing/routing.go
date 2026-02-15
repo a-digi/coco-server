@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	serverdi "github.com/a-digi/coco-server/server/di"
+	"github.com/a-digi/coco-server/server/security"
 )
 
 type RouteHandler struct {
@@ -13,8 +14,9 @@ type RouteHandler struct {
 }
 
 type RoutingBuilder struct {
-	routes   []RouteHandler
-	Context  serverdi.Context
+	routes        []RouteHandler
+	Context       serverdi.Context
+	SecurityLayer security.SecurityLayer
 }
 
 func NewRoutingBuilder() *RoutingBuilder {
@@ -27,6 +29,10 @@ func (rb *RoutingBuilder) AddContext(ctx serverdi.Context) {
 	rb.Context = ctx
 }
 
+func (rb *RoutingBuilder) SetSecurityLayer(layer security.SecurityLayer) {
+	rb.SecurityLayer = layer
+}
+
 func (rb *RoutingBuilder) AddRoute(method, pattern string, handler http.HandlerFunc) {
 	rb.routes = append(rb.routes, RouteHandler{Method: method, Pattern: pattern, Handler: handler})
 }
@@ -34,6 +40,12 @@ func (rb *RoutingBuilder) AddRoute(method, pattern string, handler http.HandlerF
 func (rb *RoutingBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, route := range rb.routes {
 		if r.URL.Path == route.Pattern && r.Method == route.Method {
+			if rb.SecurityLayer != nil {
+				if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
+					// Authorization failed, response already handled or block
+					return
+				}
+			}
 			route.Handler(w, r)
 			return
 		}

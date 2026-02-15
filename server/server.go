@@ -11,6 +11,7 @@ import (
 
 	"github.com/a-digi/coco-logger/logger"
 	"github.com/a-digi/coco-server/server/routing"
+	"github.com/a-digi/coco-server/server/security"
 )
 
 // StartServer starts the HTTP server and returns the server instance and config.
@@ -114,4 +115,9 @@ func SendSIGTERM(pid int) error {
 	}
 
 	return nil
+}
+
+// Add a setter for the security layer
+func SetSecurityLayer(layer security.SecurityLayer) {
+	routing.GlobalRouteBuilder.SetSecurityLayer(layer)
 }
