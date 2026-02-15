@@ -16,6 +16,7 @@ go get github.com/a-digi/coco-server
 - Request and response handling
 - Dependency injection
 - Logging
+- Security layer (request authorization)
 
 ## Example
 
@@ -24,16 +25,30 @@ package main
 
 import (
     "github.com/a-digi/coco-server/server"
+    "github.com/a-digi/coco-server/server/security"
 )
+
+type MySecurityLayer struct{}
+
+func (s *MySecurityLayer) Authorize(w http.ResponseWriter, r *http.Request, ctx *server.Context) error {
+    // Implement your authorization logic here
+    // Return an error to deny access
+    return nil // Allow all requests
+}
 
 func main() {
     srv := server.New()
+    srv.SecurityLayer = &MySecurityLayer{}
     srv.GET("/", func(ctx *server.Context) {
         ctx.String(200, "Hello, world!")
     })
     srv.Run(8080)
 }
 ```
+
+## Security Layer
+
+The security layer allows you to add custom request authorization logic. Implement the `Authorize` method and assign your security layer to the server. If `Authorize` returns an error, the request is denied with HTTP 403 Forbidden.
 
 ## Directory Structure
 
@@ -47,6 +62,7 @@ func main() {
   - `request/` – Request handling
   - `response/` – Response handling
   - `routing/` – Routing and route management
+  - `security/` – Security layer logic
 
 ## Documentation
 

@@ -37,15 +37,27 @@ func (rb *RoutingBuilder) AddRoute(method, pattern string, handler http.HandlerF
 	rb.routes = append(rb.routes, RouteHandler{Method: method, Pattern: pattern, Handler: handler})
 }
 
+func (rb *RoutingBuilder) authorizeRequest(w http.ResponseWriter, r *http.Request) bool {
+	if rb.SecurityLayer == nil {
+		return true
+	}
+
+	if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
+		return false
+	}
+
+	return true
+}
+
 func (rb *RoutingBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	if !rb.authorizeRequest(w, r) {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+
 	for _, route := range rb.routes {
 		if r.URL.Path == route.Pattern && r.Method == route.Method {
-			if rb.SecurityLayer != nil {
-				if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
-					// Authorization failed, response already handled or block
-					return
-				}
-			}
 			route.Handler(w, r)
 			return
 		}

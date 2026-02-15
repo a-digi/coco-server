@@ -14,7 +14,6 @@ import (
 	"github.com/a-digi/coco-server/server/security"
 )
 
-// StartServer starts the HTTP server and returns the server instance and config.
 func StartServer(configPath string, log logger.Logger) (*http.Server, *Config, error) {
 	log.Info("Starting StartServer()...")
 	config, err := ensureConfig(configPath)
