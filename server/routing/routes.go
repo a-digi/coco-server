@@ -91,6 +91,7 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, route := range rb.routes {
 
 		if len(route.YamlContent) == 0 || route.HandlerMap == nil {
+            rb.Context.GetLogger().Warning("Route skipped: YamlContent leer oder HandlerMap nil")
 			continue
 		}
 
@@ -98,6 +99,7 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		decoder := yaml.NewDecoder(bytes.NewReader(route.YamlContent))
 
 		if err := decoder.Decode(&yamlConfig); err != nil {
+            rb.Context.GetLogger().Warning("YAML konnte nicht geparst werden: %v", err)
 			continue
 		}
 
@@ -118,6 +120,8 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+    rb.Context.GetLogger().Warning("Request not found: %s %s", r.Method, r.URL.Path)
 	http.NotFound(w, r)
 }
 
