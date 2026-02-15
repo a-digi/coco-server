@@ -5,6 +5,7 @@ import (
 
 	serverdi "github.com/a-digi/coco-server/server/di"
 	"github.com/a-digi/coco-server/server/security"
+	"github.com/a-digi/coco-server/server/response"
 )
 
 type RouteHandler struct {

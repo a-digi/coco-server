@@ -9,9 +9,9 @@ func SuccessResponse(w http.ResponseWriter, status int, resp interface{}) {
 	buildHeaders(w)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-        "success":   true,
-        "message": resp,
-    })
+		"success": true,
+		"message": resp,
+	})
 }
 
 func ErrorResponse(w http.ResponseWriter, status int, message string) {
@@ -33,10 +33,15 @@ func NotFoundResponse(w http.ResponseWriter, message string) {
 }
 
 func buildHeaders(w http.ResponseWriter) {
-    w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Max-Age", "0")
 	w.Header().Set("Content-Type", "application/json")
+}
+
+// Exported function for CORS headers
+func BuildHeaders(w http.ResponseWriter) {
+	buildHeaders(w)
 }
