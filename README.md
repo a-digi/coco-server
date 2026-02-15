@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/a-digi/coco-server.svg)](https://pkg.go.dev/github.com/a-digi/coco-server)
 
-Ein leichtgewichtiges, modular aufgebautes Go-Server-Framework.
+A lightweight, modular Go server framework.
 
 ## Installation
 
@@ -11,13 +11,13 @@ go get github.com/a-digi/coco-server
 ```
 
 ## Features
-- Einfache Server-Konfiguration
-- Routing und Middleware-Unterstützung
-- Request- und Response-Handling
-- Dependency Injection
+- Simple server configuration
+- Routing and middleware support
+- Request and response handling
+- Dependency injection
 - Logging
 
-## Beispiel
+## Example
 
 ```go
 package main
@@ -29,29 +29,29 @@ import (
 func main() {
     srv := server.New()
     srv.GET("/", func(ctx *server.Context) {
-        ctx.String(200, "Hallo, Welt!")
+        ctx.String(200, "Hello, world!")
     })
     srv.Run(8080)
 }
 ```
 
-## Verzeichnisstruktur
+## Directory Structure
 
-- `server/` – Hauptlogik des Frameworks
-  - `config.go` – Konfiguration
+- `server/` – Main framework logic
+  - `config.go` – Configuration
   - `log.go` – Logging
-  - `pid.go` – Prozessmanagement
-  - `port.go` – Portverwaltung
-  - `server.go` – Server-Logik
-  - `di/` – Dependency Injection
-  - `request/` – Request-Handling
-  - `response/` – Response-Handling
-  - `routing/` – Routing und Routenverwaltung
+  - `pid.go` – Process management
+  - `port.go` – Port management
+  - `server.go` – Server logic
+  - `di/` – Dependency injection
+  - `request/` – Request handling
+  - `response/` – Response handling
+  - `routing/` – Routing and route management
 
-## Dokumentation
+## Documentation
 
-Die vollständige Dokumentation findest du auf [pkg.go.dev](https://pkg.go.dev/github.com/a-digi/coco-server).
+Full documentation can be found at [pkg.go.dev](https://pkg.go.dev/github.com/a-digi/coco-server).
 
-## Lizenz
+## License
 
-MIT License – siehe [LICENSE](LICENSE)
+MIT License – see [LICENSE](LICENSE)
