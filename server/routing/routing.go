@@ -50,7 +50,12 @@ func (rb *RoutingBuilder) authorizeRequest(w http.ResponseWriter, r *http.Reques
 }
 
 func (rb *RoutingBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
+	if r.Method == http.MethodOptions {
+		// Handle CORS preflight
+		response.BuildHeaders(w)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	if !rb.authorizeRequest(w, r) {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return

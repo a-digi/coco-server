@@ -8,6 +8,7 @@ import (
 	"github.com/a-digi/coco-logger/logger"
 	serverdi "github.com/a-digi/coco-server/server/di"
 	"github.com/a-digi/coco-server/server/security"
+	"github.com/a-digi/coco-server/server/response"
 )
 
 type HandlerInterface interface {
@@ -90,6 +91,12 @@ func (rb *RouteBuilder) Build(log logger.Logger) http.Handler {
 }
 
 func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		// Handle CORS preflight
+		response.BuildHeaders(w)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	if rb.SecurityLayer != nil {
 		if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
 			// Authorization failed, response already handled or block
