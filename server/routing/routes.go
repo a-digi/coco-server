@@ -111,6 +111,7 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == rc.Path && r.Method == rc.Method {
 				handler, ok := route.HandlerMap[rc.Executor]
 				if ok {
+					rb.LogInfo("Request success: %s %s -> %s", r.Method, r.URL.Path, rc.Executor)
 					handler.ServeHTTP(w, r, rb.Context)
 					return
 				}
@@ -162,4 +163,18 @@ func RegisterRoutes(routeConfigs Routes, log logger.Logger, ctx serverdi.Context
 	}
 
 	return rb
+}
+
+func (rb *RouteBuilder) LogInfo(format string, args ...interface{}) {
+	if rb.Context.Logger == nil {
+		return
+	}
+	rb.Context.Logger.Info(format, args...)
+}
+
+func (rb *RouteBuilder) LogWarning(format string, args ...interface{}) {
+	if rb.Context.Logger == nil {
+		return
+	}
+	rb.Context.Logger.Warn(format, args...)
 }
