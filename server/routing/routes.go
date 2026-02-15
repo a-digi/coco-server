@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"log"
 	"net/http"
 	"bytes"
 
@@ -89,7 +88,6 @@ func (rb *RouteBuilder) Build(log logger.Logger) http.Handler {
 }
 
 func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[ServeHTTP] Incoming request: path=%s, method=%s", r.URL.Path, r.Method)
 	for _, route := range rb.routes {
 
 		if len(route.YamlContent) == 0 || route.HandlerMap == nil {
@@ -115,8 +113,6 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if ok {
 					handler.ServeHTTP(w, r, rb.Context)
 					return
-				} else {
-					log.Printf("[ServeHTTP] Handler not found for executor: %s", rc.Executor)
 				}
 			}
 		}
