@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,37 +12,6 @@ import (
 	"github.com/a-digi/coco-logger/logger"
 	"github.com/a-digi/coco-server/server/routing"
 )
-
-type DomainFile struct {
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Rules       []DomainRule  `json:"rules"`
-}
-
-type DomainRule struct {
-	ID      string `json:"id"`
-	Pattern string `json:"pattern"`
-	Action  string `json:"action"`
-}
-
-func loadDomainFiles(paths []string) ([]DomainFile, error) {
-	var domains []DomainFile
-	for _, path := range paths {
-		file, err := os.Open(path)
-		if err != nil {
-			return nil, fmt.Errorf("could not open domain file %s: %w", path, err)
-		}
-		defer file.Close()
-		var domain DomainFile
-		dec := json.NewDecoder(file)
-		if err := dec.Decode(&domain); err != nil {
-			return nil, fmt.Errorf("could not parse domain file %s: %w", path, err)
-		}
-
-		domains = append(domains, domain)
-	}
-	return domains, nil
-}
 
 // StartServer starts the HTTP server and returns the server instance and config.
 func StartServer(configPath string, log logger.Logger) (*http.Server, *Config, error) {
@@ -64,13 +32,6 @@ func StartServer(configPath string, log logger.Logger) (*http.Server, *Config, e
 		return nil, nil, err
 	}
 	log.Info("Wrote PID file to %s", config.PidFile)
-
-	domains, err := loadDomainFiles(config.DomainFiles)
-	if err != nil {
-		log.Error("Failed to load domain files: %v", err)
-		return nil, nil, err
-	}
-	log.Info("Loaded %d domain files", len(domains))
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	server := &http.Server{
