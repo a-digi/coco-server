@@ -1,18 +1,19 @@
 package routing
 
 import (
-	"net/http"
 	"bytes"
+	"net/http"
 
-	"gopkg.in/yaml.v3"
 	"github.com/a-digi/coco-logger/logger"
 	serverdi "github.com/a-digi/coco-server/server/di"
-	"github.com/a-digi/coco-server/server/security"
+	"github.com/a-digi/coco-server/server/request"
 	"github.com/a-digi/coco-server/server/response"
+	"github.com/a-digi/coco-server/server/security"
+	"gopkg.in/yaml.v3"
 )
 
 type HandlerInterface interface {
-	ServeHTTP(http.ResponseWriter, *http.Request, serverdi.Context)
+	ServeHTTP(ctx request.RequestContext)
 }
 
 type RouteConfig struct {
@@ -47,12 +48,12 @@ func flattenRoutes(currentItem RouteConfig, prefix string, parentConfig RouteCon
 		currentContentType = parentConfig.ContentType
 	}
 
-    if currentItem.Method != "" && currentItem.Executor != "" {
-        route := currentItem
-        route.Path = currentPath
-        route.ContentType = currentContentType
-        routes = append(routes, route)
-    }
+	if currentItem.Method != "" && currentItem.Executor != "" {
+		route := currentItem
+		route.Path = currentPath
+		route.ContentType = currentContentType
+		routes = append(routes, route)
+	}
 
 	if len(currentItem.Children) > 0 {
 		for _, child := range currentItem.Children {
@@ -72,9 +73,9 @@ type Route struct {
 }
 
 type RouteBuilder struct {
-	routes     []Routes
-	HandlerMap map[string]HandlerInterface
-	Context    serverdi.Context
+	routes        []Routes
+	HandlerMap    map[string]HandlerInterface
+	Context       serverdi.Context
 	SecurityLayer security.SecurityLayer
 }
 
@@ -92,21 +93,19 @@ func (rb *RouteBuilder) Build(log logger.Logger) http.Handler {
 
 func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
-		// Handle CORS preflight
 		response.BuildHeaders(w)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 	if rb.SecurityLayer != nil {
 		if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
-			// Authorization failed, response already handled or block
 			return
 		}
 	}
 	for _, route := range rb.routes {
 
 		if len(route.YamlContent) == 0 || route.HandlerMap == nil {
-            rb.Context.GetLogger().Warning("Route skipped: YamlContent empty or HandlerMap nil")
+			rb.Context.GetLogger().Warning("Route skipped: YamlContent empty or HandlerMap nil")
 			continue
 		}
 
@@ -114,7 +113,7 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		decoder := yaml.NewDecoder(bytes.NewReader(route.YamlContent))
 
 		if err := decoder.Decode(&yamlConfig); err != nil {
-            rb.Context.GetLogger().Warning("YAML could not be parsed: %v", err)
+			rb.Context.GetLogger().Warning("YAML could not be parsed: %v", err)
 			continue
 		}
 
@@ -125,18 +124,20 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, rc := range flatRoutes {
-			if r.URL.Path == rc.Path && r.Method == rc.Method {
+			if MatchPath(rc.Path, r.URL.Path) && r.Method == rc.Method {
 				handler, ok := route.HandlerMap[rc.Executor]
 				if ok {
 					rb.Context.GetLogger().Info("Request success: %s %s -> %s", r.Method, r.URL.Path, rc.Executor)
-					handler.ServeHTTP(w, r, rb.Context)
+					reqCtx := request.NewContext(w, r, rb.Context)
+					reqCtx.GetURI().ExtractPathVariables(rc.Path)
+					handler.ServeHTTP(reqCtx)
 					return
 				}
 			}
 		}
 	}
 
-    rb.Context.GetLogger().Warning("Request not found: %s %s", r.Method, r.URL.Path)
+	rb.Context.GetLogger().Warning("Request not found: %s %s", r.Method, r.URL.Path)
 	http.NotFound(w, r)
 }
 
@@ -180,7 +181,9 @@ func RegisterRoutes(routeConfigs Routes, log logger.Logger, ctx serverdi.Context
 					http.Error(w, "Content-Type must be "+route.ContentType, http.StatusUnsupportedMediaType)
 					return
 				}
-				handler.ServeHTTP(w, r, ctx)
+				reqCtx := request.NewContext(w, r, ctx)
+				reqCtx.GetURI().ExtractPathVariables(route.Path)
+				handler.ServeHTTP(reqCtx)
 			})
 		}
 	}

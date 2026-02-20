@@ -2,16 +2,45 @@ package routing
 
 import (
 	"net/http"
+	"strings"
 
 	serverdi "github.com/a-digi/coco-server/server/di"
-	"github.com/a-digi/coco-server/server/security"
 	"github.com/a-digi/coco-server/server/response"
+	"github.com/a-digi/coco-server/server/security"
 )
 
 type RouteHandler struct {
 	Method  string
 	Pattern string
 	Handler http.HandlerFunc
+}
+
+func MatchPath(pattern, path string) bool {
+	pSegs := strings.Split(strings.Trim(pattern, "/"), "/")
+	rSegs := strings.Split(strings.Trim(path, "/"), "/")
+
+	if len(pSegs) != len(rSegs) {
+		return false
+	}
+
+	for i := range pSegs {
+		pSeg := pSegs[i]
+		rSeg := rSegs[i]
+
+		if pSeg == rSeg {
+			continue
+		}
+
+		if strings.HasPrefix(pSeg, "{") && strings.HasSuffix(pSeg, "}") {
+			if strings.HasPrefix(rSeg, "{") && strings.HasSuffix(rSeg, "}") {
+				continue
+			}
+		}
+
+		return false
+	}
+
+	return true
 }
 
 type RoutingBuilder struct {
@@ -63,7 +92,7 @@ func (rb *RoutingBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, route := range rb.routes {
-		if r.URL.Path == route.Pattern && r.Method == route.Method {
+		if MatchPath(route.Pattern, r.URL.Path) && r.Method == route.Method {
 			route.Handler(w, r)
 			return
 		}

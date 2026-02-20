@@ -12,9 +12,9 @@ var (
 )
 
 type formFieldInfo struct {
-	Index    int
-	JsonTag  string
-	Kind     reflect.Kind
+	Index   int
+	JsonTag string
+	Kind    reflect.Kind
 }
 
 func MapFormToStruct(r *http.Request, dest interface{}) error {
@@ -54,10 +54,13 @@ func MapFormToStruct(r *http.Request, dest interface{}) error {
 		if formValue == "" {
 			continue
 		}
+
 		fv := v.Field(info.Index)
+
 		if !fv.CanSet() {
 			continue
 		}
+
 		switch info.Kind {
 		case reflect.String:
 			fv.SetString(formValue)
