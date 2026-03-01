@@ -3,6 +3,7 @@ package routing
 import (
 	"bytes"
 	"net/http"
+	"strings"
 
 	"github.com/a-digi/coco-logger/logger"
 	serverdi "github.com/a-digi/coco-server/server/di"
@@ -85,6 +86,33 @@ func flattenRoutes(currentItem RouteConfig, prefix string, parentConfig RouteCon
 	return routes
 }
 
+func createSecRoute(reqPath string, method string, flatRoutes []RouteConfig) *security.Route {
+	for _, fRoute := range flatRoutes {
+		if fRoute.Method == method && MatchPath(fRoute.Path, reqPath) {
+			exact := true
+			pSegs := strings.Split(fRoute.Path, "/")
+			rSegs := strings.Split(reqPath, "/")
+			for i := 0; i < len(pSegs) && i < len(rSegs); i++ {
+				if pSegs[i] != rSegs[i] {
+					if strings.HasPrefix(pSegs[i], "{res:") && strings.HasPrefix(rSegs[i], "{res:") {
+						exact = false
+						break
+					}
+				}
+			}
+			if exact {
+				return &security.Route{
+					Path:     fRoute.Path,
+					Method:   fRoute.Method,
+					Security: fRoute.Security,
+					Scopes:   fRoute.Scopes,
+				}
+			}
+		}
+	}
+	return nil
+}
+
 type Route struct {
 	Path        string
 	Method      string
@@ -147,12 +175,11 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					reqCtx.GetURI().ExtractPathVariables(rc.Path)
 
 					if rb.SecurityLayer != nil {
-						secRoute := &security.Route{
-							Path:          reqCtx.GetURI().Path,
-							Method:        rc.Method,
-							Security:      rc.Security,
-							Scopes:        rc.Scopes,
-							PathVariables: reqCtx.GetURI().GetAllPathVariables(),
+						secRoute := createSecRoute(reqCtx.GetURI().Path, r.Method, flatRoutes)
+						if secRoute == nil {
+							rb.Context.GetLogger().Warning("Request not found: %s %s", r.Method, r.URL.Path)
+							http.NotFound(w, r)
+							return
 						}
 
 						if err := rb.SecurityLayer.Authorize(w, r, rb.Context, secRoute); err != nil {
