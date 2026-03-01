@@ -21,6 +21,8 @@ type RouteConfig struct {
 	Method      string        `yaml:"method"`
 	Executor    string        `yaml:"executor"`
 	ContentType string        `yaml:"content_type"`
+	Security    string        `yaml:"security"`
+	Scopes      []string      `yaml:"scopes"`
 	Children    []RouteConfig `yaml:"children"`
 }
 
@@ -48,16 +50,34 @@ func flattenRoutes(currentItem RouteConfig, prefix string, parentConfig RouteCon
 		currentContentType = parentConfig.ContentType
 	}
 
+	var currentScopes []string
+	if len(parentConfig.Scopes) > 0 {
+		currentScopes = append(currentScopes, parentConfig.Scopes...)
+	}
+	if len(currentItem.Scopes) > 0 {
+		currentScopes = append(currentScopes, currentItem.Scopes...)
+	}
+
+	currentSecurity := currentItem.Security
+	if currentSecurity == "" {
+		currentSecurity = parentConfig.Security
+	}
+
 	if currentItem.Method != "" && currentItem.Executor != "" {
 		route := currentItem
 		route.Path = currentPath
 		route.ContentType = currentContentType
+		route.Security = currentSecurity
+		route.Scopes = currentScopes
 		routes = append(routes, route)
 	}
 
 	if len(currentItem.Children) > 0 {
 		for _, child := range currentItem.Children {
-			childRoutes := flattenRoutes(child, currentPath, parentConfig)
+			// Pass currentItem as parentConfig to propagate inherited scopes
+			childCopy := currentItem
+			childCopy.Scopes = currentScopes
+			childRoutes := flattenRoutes(child, currentPath, childCopy)
 			routes = append(routes, childRoutes...)
 		}
 	}
