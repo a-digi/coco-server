@@ -194,7 +194,6 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			if err := rb.SecurityLayer.Authorize(w, r, rb.Context, secRoute); err != nil {
 				rb.Context.GetLogger().Warning("Request denied: %s %s", r.Method, r.URL.Path)
-				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 				return
 			}
 
