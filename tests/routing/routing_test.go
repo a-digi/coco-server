@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
 	"github.com/a-digi/coco-server/server/routing"
 )
 
 func TestRoutingBuilder_AddRouteAndServe(t *testing.T) {
 	rb := routing.NewRoutingBuilder()
-	rb.AddRoute("GET", "/test", func(w http.ResponseWriter, r *http.Request) {
+	rb.AddRoute("GET", "/test", "", nil, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 		w.Write([]byte("ok"))
 	})

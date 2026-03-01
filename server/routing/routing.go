@@ -10,9 +10,11 @@ import (
 )
 
 type RouteHandler struct {
-	Method  string
-	Pattern string
-	Handler http.HandlerFunc
+	Method   string
+	Pattern  string
+	Security string
+	Scopes   []string
+	Handler  http.HandlerFunc
 }
 
 func MatchPath(pattern, path string) bool {
@@ -63,20 +65,8 @@ func (rb *RoutingBuilder) SetSecurityLayer(layer security.SecurityLayer) {
 	rb.SecurityLayer = layer
 }
 
-func (rb *RoutingBuilder) AddRoute(method, pattern string, handler http.HandlerFunc) {
-	rb.routes = append(rb.routes, RouteHandler{Method: method, Pattern: pattern, Handler: handler})
-}
-
-func (rb *RoutingBuilder) authorizeRequest(w http.ResponseWriter, r *http.Request) bool {
-	if rb.SecurityLayer == nil {
-		return true
-	}
-
-	if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
-		return false
-	}
-
-	return true
+func (rb *RoutingBuilder) AddRoute(method, pattern, securityType string, scopes []string, handler http.HandlerFunc) {
+	rb.routes = append(rb.routes, RouteHandler{Method: method, Pattern: pattern, Security: securityType, Scopes: scopes, Handler: handler})
 }
 
 func (rb *RoutingBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -86,13 +76,21 @@ func (rb *RoutingBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if !rb.authorizeRequest(w, r) {
-		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		return
-	}
 
 	for _, route := range rb.routes {
 		if MatchPath(route.Pattern, r.URL.Path) && r.Method == route.Method {
+			if rb.SecurityLayer != nil {
+				secRoute := &security.Route{
+					Path:          r.URL.Path,
+					Method:        route.Method,
+					Security:      route.Security,
+					Scopes:        route.Scopes,
+					PathVariables: nil,
+				}
+				if err := rb.SecurityLayer.Authorize(w, r, rb.Context, secRoute); err != nil {
+					return
+				}
+			}
 			route.Handler(w, r)
 			return
 		}

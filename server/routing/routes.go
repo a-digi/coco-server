@@ -117,11 +117,7 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if rb.SecurityLayer != nil {
-		if err := rb.SecurityLayer.Authorize(w, r, rb.Context); err != nil {
-			return
-		}
-	}
+	// Security check moved inside route match loop
 	for _, route := range rb.routes {
 
 		if len(route.YamlContent) == 0 || route.HandlerMap == nil {
@@ -147,9 +143,23 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if MatchPath(rc.Path, r.URL.Path) && r.Method == rc.Method {
 				handler, ok := route.HandlerMap[rc.Executor]
 				if ok {
-					rb.Context.GetLogger().Info("Request success: %s %s -> %s", r.Method, r.URL.Path, rc.Executor)
 					reqCtx := request.NewContext(w, r, rb.Context)
 					reqCtx.GetURI().ExtractPathVariables(rc.Path)
+
+					if rb.SecurityLayer != nil {
+						secRoute := &security.Route{
+							Path:          reqCtx.GetURI().Path,
+							Method:        rc.Method,
+							Security:      rc.Security,
+							Scopes:        rc.Scopes,
+							PathVariables: reqCtx.GetURI().GetAllPathVariables(),
+						}
+
+						if err := rb.SecurityLayer.Authorize(w, r, rb.Context, secRoute); err != nil {
+							return
+						}
+					}
+					rb.Context.GetLogger().Info("Request success: %s %s -> %s", r.Method, r.URL.Path, rc.Executor)
 					handler.ServeHTTP(reqCtx)
 					return
 				}
@@ -196,7 +206,7 @@ func RegisterRoutes(routeConfigs Routes, log logger.Logger, ctx serverdi.Context
 				log.Error("Unknown executor: %s", route.Executor)
 				continue
 			}
-			rb.AddRoute(route.Method, route.Path, func(w http.ResponseWriter, r *http.Request) {
+			rb.AddRoute(route.Method, route.Path, route.Security, route.Scopes, func(w http.ResponseWriter, r *http.Request) {
 				if route.ContentType != "" && r.Header.Get("Content-Type") != route.ContentType {
 					http.Error(w, "Content-Type must be "+route.ContentType, http.StatusUnsupportedMediaType)
 					return
