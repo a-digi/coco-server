@@ -168,29 +168,38 @@ func (rb *RouteBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, rc := range flatRoutes {
-			if MatchPath(rc.Path, r.URL.Path) && r.Method == rc.Method {
-				handler, ok := route.HandlerMap[rc.Executor]
-				if ok {
-					reqCtx := request.NewContext(w, r, rb.Context)
-					reqCtx.GetURI().ExtractPathVariables(rc.Path)
-
-					if rb.SecurityLayer != nil {
-						secRoute := createSecRoute(reqCtx.GetURI().Path, r.Method, flatRoutes)
-						if secRoute == nil {
-							rb.Context.GetLogger().Warning("Request not found: %s %s", r.Method, r.URL.Path)
-							http.NotFound(w, r)
-							return
-						}
-
-						if err := rb.SecurityLayer.Authorize(w, r, rb.Context, secRoute); err != nil {
-							return
-						}
-					}
-					rb.Context.GetLogger().Info("Request success: %s %s -> %s", r.Method, r.URL.Path, rc.Executor)
-					handler.ServeHTTP(reqCtx)
-					return
-				}
+			if !MatchPath(rc.Path, r.URL.Path) || r.Method != rc.Method {
+				continue
 			}
+
+			handler, ok := route.HandlerMap[rc.Executor]
+			if !ok {
+				continue
+			}
+
+			reqCtx := request.NewContext(w, r, rb.Context)
+			reqCtx.GetURI().ExtractPathVariables(rc.Path)
+			rb.Context.GetLogger().Info("Request success: %s %s -> %s", r.Method, r.URL.Path, rc.Executor)
+			if rb.SecurityLayer == nil {
+				handler.ServeHTTP(reqCtx)
+				return
+			}
+
+			secRoute := createSecRoute(reqCtx.GetURI().Path, r.Method, flatRoutes)
+			if secRoute == nil {
+				rb.Context.GetLogger().Warning("Request denied: %s %s", r.Method, r.URL.Path)
+				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				return
+			}
+
+			if err := rb.SecurityLayer.Authorize(w, r, rb.Context, secRoute); err != nil {
+				rb.Context.GetLogger().Warning("Request denied: %s %s", r.Method, r.URL.Path)
+				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				return
+			}
+
+			handler.ServeHTTP(reqCtx)
+			return
 		}
 	}
 
